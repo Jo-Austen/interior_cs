@@ -1,6 +1,7 @@
 <script setup>
 import HelloWorld from './components/HelloWorld.vue'
 import TheWelcome from './components/TheWelcome.vue'
+import PostsList from './components/PostsList.vue'
 </script>
 
 <template>
@@ -15,6 +16,9 @@ import TheWelcome from './components/TheWelcome.vue'
   <main>
     <TheWelcome />
   </main>
+
+  <h1>Company Site</h1>
+    <PostsList />
 </template>
 
 <style scoped>
