@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
 from backend.routers_posts import router as posts_router
+from backend.routers_contact import router as contact_router
+
 
 load_dotenv()
 origins = [o.strip() for o in os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:5173").split(",")]
@@ -18,3 +20,4 @@ def healthz():
     return {"status": "ok"}
 
 app.include_router(posts_router)
+app.include_router(contact_router)
