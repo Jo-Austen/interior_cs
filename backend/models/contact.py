@@ -6,7 +6,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
-from backend.db import Base
+from backend.core.db import Base
 
 class Contact(Base):
     __tablename__ = "contacts"

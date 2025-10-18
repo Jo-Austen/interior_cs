@@ -2,8 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
-from backend.routers_posts import router as posts_router
-from backend.routers_contact import router as contact_router
+from backend.api.router import api_router
 
 
 load_dotenv()
@@ -19,5 +18,5 @@ app.add_middleware(
 def healthz():
     return {"status": "ok"}
 
-app.include_router(posts_router)
-app.include_router(contact_router)
+# 统一挂载
+app.include_router(api_router)

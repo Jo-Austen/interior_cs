@@ -2,9 +2,9 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from backend.db import get_db
-from backend.models_contact import Contact
-from backend.schemas_contact import ContactCreate, ContactOut
+from backend.core.db import get_db
+from backend.models.contact import Contact
+from backend.schemas.contacts import ContactCreate, ContactOut
 
 router = APIRouter(prefix="/api/v1/contacts", tags=["contacts"])
 

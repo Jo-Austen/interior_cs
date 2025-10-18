@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy import BigInteger, String, Text, DateTime, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
-from backend.db import Base
+from backend.core.db import Base
 
 class Post(Base):
     __tablename__ = "posts"
