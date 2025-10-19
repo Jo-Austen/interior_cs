@@ -1,7 +1,7 @@
 # backend/schemas_contact.py
 from typing import Optional, Literal
-from datetime import date
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from datetime import date, datetime
+from pydantic import BaseModel, EmailStr, Field, model_validator, field_validator
 
 ContactType = Literal["online", "in_person"]
 
@@ -25,6 +25,15 @@ class ContactCreate(BaseModel):
 
     consent: bool
 
+    # ✅ 新增：前置校验器，把空字符串 "" 视为 None，避免字段层报错
+    @field_validator(
+        'preferred_contact', 'preferred_time',
+        'visit_date', 'visit_time', 'visit_purpose',
+        mode='before'
+    )
+    def empty_str_to_none(cls, v):
+        return None if v == '' else v
+
     @model_validator(mode="after")
     def check_branch_requirements(self):
         if not self.consent:
@@ -34,7 +43,7 @@ class ContactCreate(BaseModel):
             if not (self.preferred_contact and self.preferred_time):
                 raise ValueError("线上咨询需提供 preferred_contact 与 preferred_time")
         elif self.contact_type == "in_person":
-            missing = [k for k,val in {
+            missing = [k for k, val in {
                 "visit_date": self.visit_date,
                 "visit_time": self.visit_time,
                 "visit_purpose": self.visit_purpose
@@ -42,6 +51,7 @@ class ContactCreate(BaseModel):
             if missing:
                 raise ValueError(f"到店咨询缺少必填字段: {', '.join(missing)}")
         return self
+
 
 class ContactOut(BaseModel):
     id: int
@@ -55,7 +65,7 @@ class ContactOut(BaseModel):
     visit_date: Optional[date]
     visit_time: Optional[str]
     visit_purpose: Optional[str]
-    submitted_at: str
+    submitted_at: datetime
 
     class Config:
         from_attributes = True

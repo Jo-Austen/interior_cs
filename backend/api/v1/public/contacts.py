@@ -6,7 +6,7 @@ from backend.core.db import get_db
 from backend.models.contact import Contact
 from backend.schemas.contacts import ContactCreate, ContactOut
 
-router = APIRouter(prefix="/api/v1/contacts", tags=["contacts"])
+router = APIRouter(prefix="/contacts")
 
 @router.post("/", response_model=ContactOut, name="Create contact")
 def create_contact(payload: ContactCreate, request: Request, db: Session = Depends(get_db)):

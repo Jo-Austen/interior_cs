@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
+import { computed } from 'vue';
 
 const route = useRoute()
 
@@ -19,9 +20,9 @@ const items = computed<NavigationMenuItem[]>(() => [{
   to: 'https://go.nuxt.com/figma-ui',
   target: '_blank'
 }, {
-  label: 'Releases',
+  label: 'Contact',
   icon: 'i-lucide-rocket',
-  to: 'https://github.com/nuxt/ui/releases',
+  to: '/contact',
   target: '_blank'
 }])
 </script>

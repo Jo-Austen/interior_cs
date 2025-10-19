@@ -4,7 +4,7 @@ from sqlalchemy import select
 from backend.core.db import get_db
 from backend.models.post import Post
 
-router = APIRouter(prefix="/api/v1/posts", tags=["posts"])
+router = APIRouter(prefix="/api/v1/posts")
 
 @router.get("/", name="List posts", operation_id="list_posts")
 def list_posts(db: Session = Depends(get_db)):
