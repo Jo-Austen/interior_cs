@@ -7,6 +7,7 @@ export default defineNuxtConfig({
   app: {
     baseURL: '/',   // 先保持默认
   },
+  
   components: [
     { path: '~/components/site', pathPrefix: false },
     { path: '~/components/admin', pathPrefix: false },
