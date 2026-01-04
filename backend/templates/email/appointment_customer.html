@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+    <h2>我们已收到您的预约</h2>
+    <p>感谢您的联系，以下为预约信息：</p>
+
+    <ul>
+      <li><strong>姓名：</strong>{{ contact.name }}</li>
+      <li><strong>邮箱：</strong>{{ contact.email }}</li>
+      {% if contact.phone %}<li><strong>电话：</strong>{{ contact.phone }}</li>{% endif %}
+      <li><strong>类型：</strong>{{ contact.contact_type }}</li>
+      {% if contact.contact_type == 'online' %}
+        <li><strong>沟通方式：</strong>{{ contact.preferred_contact }}</li>
+        <li><strong>首选时段：</strong>{{ contact.preferred_time }}</li>
+      {% else %}
+        <li><strong>到店日期/时段：</strong>{{ contact.visit_date }} / {{ contact.visit_time }}</li>
+        <li><strong>到店目的：</strong>{{ contact.visit_purpose }}</li>
+      {% endif %}
+      <li><strong>留言：</strong>{{ contact.message }}</li>
+    </ul>
+
+    <h3>{{ company.COMPANY_NAME }}</h3>
+    {% if company.COMPANY_ADDR %}<p>地址：{{ company.COMPANY_ADDR }}</p>{% endif %}
+    {% if company.COMPANY_PHONE %}<p>电话：{{ company.COMPANY_PHONE }}</p>{% endif %}
+    {% if company.COMPANY_EMAIL %}<p>邮箱：{{ company.COMPANY_EMAIL }}</p>{% endif %}
+    {% if company.COMPANY_SITE %}<p>网站：<a href="{{ company.COMPANY_SITE }}">{{ company.COMPANY_SITE }}</a></p>{% endif %}
+
+    <p style="color:#666; font-size:12px;">本邮件为系统自动发送，请勿直接回复。</p>
+  </body>
+</html>
