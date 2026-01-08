@@ -1,7 +1,8 @@
 from backend.core.db import engine, Base
-import backend.models.post  # noqa
-import backend.models.contact      # noqa
 
-if __name__ == "__main__":
+def main():
     Base.metadata.create_all(bind=engine)
     print("Tables created.")
+
+if __name__ == "__main__":main
+    

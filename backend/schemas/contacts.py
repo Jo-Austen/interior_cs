@@ -1,4 +1,3 @@
-# backend/schemas_contact.py
 from typing import Optional, Literal
 from datetime import date, datetime
 from pydantic import BaseModel, EmailStr, Field, model_validator, field_validator
