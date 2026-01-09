@@ -1,0 +1,47 @@
+name: interior-test
+services:
+  db:
+    image: mysql:8.4
+    container_name: interior-mysql-test
+    environment:
+      MYSQL_DATABASE: company_site_test
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app_pass
+      MYSQL_ROOT_PASSWORD: root_pass_test
+    command: >
+        --character-set-server=utf8mb4
+        --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - interior_mysql_test:/var/lib/mysql
+    ports:
+      - "13306:3306"   # 可选：仅用于你本机调试 MySQL
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot_pass_test --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    image: interior-backend:test
+    env_file:
+      - ./env/test.env
+    depends_on:
+        db:
+          condition: service_healthy
+    command: ["python", "-m", "backend.scripts.init_db"]
+    restart: "no"
+
+  backend:
+    image: interior-backend:dev
+    container_name: interior-backend-test
+    env_file:
+      - ./env/test.env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:8000"
+    restart: unless-stopped
+
+volumes:
+  interior_mysql_test:

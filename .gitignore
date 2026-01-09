@@ -1,16 +1,56 @@
+# =====================
 # Python
+# =====================
 venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
 
-# Node/Vue
+# =====================
+# Node / Frontend
+# =====================
 node_modules/
 dist/
 
-# OS
-.DS_Store
+# =====================
+# Docker / Runtime
+# =====================
+docker-data/
+data/
+mysql-data/
+*.log
 
-# Environment files
+# =====================
+# Environment variables
+# =====================
 .env
 .env.local
 .env.*.local
+
+# =====================
+# IDE / Editor
+# =====================
+.vscode/
+.idea/
+*.iml
+
+# =====================
+# OS
+# =====================
+.DS_Store
+
+# =====================
+# Temp / Backup
+# =====================
+*.tmp
+*.swp
+*.bak
