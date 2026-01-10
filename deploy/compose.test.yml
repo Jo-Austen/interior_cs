@@ -39,9 +39,23 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "8081:8000"
     restart: unless-stopped
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    image: interior-frontend:dev
+    container_name: interior-frontend-test
+    env_file:
+      - ./env/test.env
+    ports:
+      - "3001:3000"
+    restart: unless-stopped
+
 
 volumes:
   interior_mysql_test:

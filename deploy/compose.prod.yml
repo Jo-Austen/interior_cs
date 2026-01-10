@@ -39,8 +39,21 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "8080:8000"
+    restart: unless-stopped
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    image: interior-frontend:dev
+    container_name: interior-frontend-prod
+    env_file:
+      - ./env/prod.env
+    ports:
+      - "3000:3000"
     restart: unless-stopped
 
 volumes:
