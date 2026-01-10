@@ -35,6 +35,8 @@ mysql-data/
 .env
 .env.local
 .env.*.local
+deploy/env/*.env
+!deploy/env/*.env.example
 
 # =====================
 # IDE / Editor
