@@ -38,6 +38,11 @@ mysql-data/
 deploy/env/*.env
 !deploy/env/*.env.example
 
+
+# local compose overrides
+deploy/compose.local.override.yml
+
+
 # =====================
 # IDE / Editor
 # =====================

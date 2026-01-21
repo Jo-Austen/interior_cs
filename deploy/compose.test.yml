@@ -5,14 +5,14 @@ services:
     image: mysql:8.4
     container_name: interior-mysql-test
     env_file:
-      - ./env/test.env
+      - /srv/app-test/env/test.env
     command: >
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
     volumes:
-      - interior_mysql_test:/var/lib/mysql
+      - /srv/app-test/data/mysql:/var/lib/mysql
     ports:
-      - "13306:3306" # 可选：仅用于你本机调试 MySQL
+      - "13306:3306"
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
       interval: 10s
@@ -24,7 +24,7 @@ services:
   migrate:
     image: interior-backend:dev
     env_file:
-      - ./env/test.env
+      - /srv/app-test/env/test.env
     depends_on:
       db:
         condition: service_healthy
@@ -35,7 +35,7 @@ services:
     image: interior-backend:dev
     container_name: interior-backend-test
     env_file:
-      - ./env/test.env
+      - /srv/app-test/env/test.env
     depends_on:
       db:
         condition: service_healthy
@@ -44,6 +44,7 @@ services:
     ports:
       - "8081:8000"
     restart: unless-stopped
+
   frontend:
     build:
       context: ..
@@ -51,11 +52,10 @@ services:
     image: interior-frontend:dev
     container_name: interior-frontend-test
     env_file:
-      - ./env/test.env
+      - /srv/app-test/env/test.env
     ports:
       - "3001:3000"
     restart: unless-stopped
 
-
-volumes:
-  interior_mysql_test:
+  volumes:
+    interior-prod-mysql-data:
