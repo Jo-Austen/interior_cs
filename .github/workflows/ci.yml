@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - "feature/**"
+      - "Master"
+  pull_request:
+    branches:
+      - "Master"
+  workflow_dispatch:
+
+jobs:
+  docker-build-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          tags: interior-backend:ci
+
+      - name: Build frontend image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: false
+          tags: interior-frontend:ci
