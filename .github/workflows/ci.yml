@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   build_and_deploy:
+    # 先把 TEST 跑通：从 Environment(test) 读取 SSH_HOST/SSH_USER/SSH_KEY
     environment: test
     runs-on: [self-hosted, macos-ci-runner]
     timeout-minutes: 60
@@ -23,6 +24,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Vars
         id: vars
@@ -58,23 +61,6 @@ jobs:
       # =========================
       # Deploy TEST (feature/*)
       # =========================
-      - name: TEST - Prepare env vars
-        if: >
-          github.event_name != 'pull_request' &&
-          startsWith(steps.vars.outputs.branch, 'feature/')
-        shell: bash
-        run: |
-          set -euo pipefail
-          SHA7="${{ steps.vars.outputs.sha7 }}"
-          echo "SHA7=${SHA7}" >> "$GITHUB_ENV"
-          echo "SSH_OPTS=-o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=yes" >> "$GITHUB_ENV"
-          echo "TAR_LOCAL=dist/base-images-${SHA7}.tar" >> "$GITHUB_ENV"
-          echo "TAR_REMOTE=/tmp/base-images-test-${SHA7}-${GITHUB_RUN_ID}.tar" >> "$GITHUB_ENV"
-          echo "REMOTE_COMPOSE=/srv/app-test/compose.yml" >> "$GITHUB_ENV"
-          echo "REMOTE_PROJECT=app_test" >> "$GITHUB_ENV"
-          echo "REMOTE_DIR=/srv/app-test" >> "$GITHUB_ENV"
-          echo "LOCAL_COMPOSE=deploy/compose.cd.test.yml" >> "$GITHUB_ENV"
-
       - name: TEST - SSH check
         if: >
           github.event_name != 'pull_request' &&
@@ -82,7 +68,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ssh ${SSH_OPTS} "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" "echo ssh_ok"
+          ssh -o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=yes \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" "echo ssh_ok"
 
       - name: TEST - Upload tar
         if: >
@@ -91,7 +78,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          scp ${SSH_OPTS} "${TAR_LOCAL}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${TAR_REMOTE}"
+          SHA7="${{ steps.vars.outputs.sha7 }}"
+          TAR_LOCAL="dist/base-images-${SHA7}.tar"
+          TAR_REMOTE="/tmp/base-images-test-${SHA7}-${GITHUB_RUN_ID}.tar"
+
+          scp -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes \
+            "$TAR_LOCAL" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${TAR_REMOTE}"
 
       - name: TEST - Upload compose
         if: >
@@ -100,7 +92,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          scp ${SSH_OPTS} "${LOCAL_COMPOSE}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${REMOTE_COMPOSE}"
+          scp -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes \
+            "deploy/compose.cd.test.yml" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/srv/app-test/compose.yml"
 
       - name: TEST - Remote docker load + delete tar
         if: >
@@ -109,10 +102,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ssh ${SSH_OPTS} "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << EOF
-            set -euo pipefail
-            docker load -i "${TAR_REMOTE}"
-            rm -f "${TAR_REMOTE}"
+          SHA7="${{ steps.vars.outputs.sha7 }}"
+          TAR_REMOTE="/tmp/base-images-test-${SHA7}-${GITHUB_RUN_ID}.tar"
+
+          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << EOF
+              set -euo pipefail
+              docker load -i "${TAR_REMOTE}"
+              rm -f "${TAR_REMOTE}"
           EOF
 
       - name: TEST - Remote compose up
@@ -122,9 +119,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ssh ${SSH_OPTS} "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << EOF
-            set -euo pipefail
-            docker compose -p "${REMOTE_PROJECT}" -f "${REMOTE_COMPOSE}" up -d --force-recreate
+          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << EOF
+              set -euo pipefail
+              docker compose -p app_test -f /srv/app-test/compose.yml up -d --force-recreate
           EOF
 
       - name: TEST - Remote status check
@@ -134,94 +132,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ssh ${SSH_OPTS} "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << EOF
-            set -euo pipefail
-            docker compose -p "${REMOTE_PROJECT}" -f "${REMOTE_COMPOSE}" ps
+          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=yes \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << EOF
+              set -euo pipefail
+              docker compose -p app_test -f /srv/app-test/compose.yml ps
           EOF
 
       # =========================
-      # Deploy PROD (Master)
+      # PROD (Master) - 先别启用
+      # 你说先把 test 跑通；等 test 稳了再拆成两个 job 或切到 repo secrets。
       # =========================
-      - name: PROD - Prepare env vars
-        if: >
-          github.event_name != 'pull_request' &&
-          steps.vars.outputs.branch == 'Master'
-        shell: bash
-        run: |
-          set -euo pipefail
-          SHA7="${{ steps.vars.outputs.sha7 }}"
-          echo "SHA7=${SHA7}" >> "$GITHUB_ENV"
-          echo "SSH_OPTS=-o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=yes" >> "$GITHUB_ENV"
-          echo "TAR_LOCAL=dist/base-images-${SHA7}.tar" >> "$GITHUB_ENV"
-          echo "TAR_REMOTE=/tmp/base-images-prod-${SHA7}-${GITHUB_RUN_ID}.tar" >> "$GITHUB_ENV"
-          echo "REMOTE_COMPOSE=/srv/app-prod/compose.yml" >> "$GITHUB_ENV"
-          echo "REMOTE_PROJECT=app_prod" >> "$GITHUB_ENV"
-          echo "REMOTE_DIR=/srv/app-prod" >> "$GITHUB_ENV"
-          echo "LOCAL_COMPOSE=deploy/compose.cd.prod.yml" >> "$GITHUB_ENV"
-
-      - name: PROD - SSH check
-        if: >
-          github.event_name != 'pull_request' &&
-          steps.vars.outputs.branch == 'Master'
-        shell: bash
-        run: |
-          set -euo pipefail
-          ssh ${SSH_OPTS} "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" "echo ssh_ok"
-
-      - name: PROD - Upload tar
-        if: >
-          github.event_name != 'pull_request' &&
-          steps.vars.outputs.branch == 'Master'
-        shell: bash
-        run: |
-          set -euo pipefail
-          scp ${SSH_OPTS} "${TAR_LOCAL}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${TAR_REMOTE}"
-
-      - name: PROD - Upload compose
-        if: >
-          github.event_name != 'pull_request' &&
-          steps.vars.outputs.branch == 'Master'
-        shell: bash
-        run: |
-          set -euo pipefail
-          scp ${SSH_OPTS} "${LOCAL_COMPOSE}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${REMOTE_COMPOSE}"
-
-      - name: PROD - Remote docker load + delete tar
-        if: >
-          github.event_name != 'pull_request' &&
-          steps.vars.outputs.branch == 'Master'
-        shell: bash
-        run: |
-          set -euo pipefail
-          ssh ${SSH_OPTS} "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << EOF
-            set -euo pipefail
-            docker load -i "${TAR_REMOTE}"
-            rm -f "${TAR_REMOTE}"
-          EOF
-
-      - name: PROD - Remote compose up
-        if: >
-          github.event_name != 'pull_request' &&
-          steps.vars.outputs.branch == 'Master'
-        shell: bash
-        run: |
-          set -euo pipefail
-          ssh ${SSH_OPTS} "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << EOF
-            set -euo pipefail
-            docker compose -p "${REMOTE_PROJECT}" -f "${REMOTE_COMPOSE}" up -d --force-recreate
-          EOF
-
-      - name: PROD - Remote status check
-        if: >
-          github.event_name != 'pull_request' &&
-          steps.vars.outputs.branch == 'Master'
-        shell: bash
-        run: |
-          set -euo pipefail
-          ssh ${SSH_OPTS} "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << EOF
-            set -euo pipefail
-            docker compose -p "${REMOTE_PROJECT}" -f "${REMOTE_COMPOSE}" ps
-          EOF
+      # - name: PROD - ...
+      #   if: >
+      #     github.event_name != 'pull_request' &&
+      #     steps.vars.outputs.branch == 'Master'
+      #   ...
 
       - name: Cleanup local dist (post)
         if: always()
