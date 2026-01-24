@@ -12,6 +12,7 @@ on:
 
 jobs:
   ci_build_and_test:
+    # 指定self-hosted，把runner注册成服务再试一下
     runs-on:  [self-hosted, macos-ci-runner]
     steps:
       - name: Checkout
