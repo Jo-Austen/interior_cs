@@ -12,7 +12,7 @@ on:
 
 jobs:
   ci_build_and_test:
-    runs-on: macos-ci-runner
+    runs-on:  [self-hosted, macos-ci-runner]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
