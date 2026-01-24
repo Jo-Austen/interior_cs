@@ -14,7 +14,7 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       (startsWith(github.event.workflow_run.head_branch, 'feature/') ||
        github.event.workflow_run.head_branch == 'Master')
-    runs-on:  [self-hosted, macos-ci-runner]
+    runs-on: [self-hosted, macos-ci-runner]
     outputs:
       sha7: ${{ steps.vars.outputs.sha7 }}
       branch: ${{ steps.vars.outputs.branch }}
@@ -59,7 +59,7 @@ jobs:
   deploy_test:
     needs: build_pack
     if: startsWith(needs.build_pack.outputs.branch, 'feature/')
-    runs-on:  [self-hosted, macos-ci-runner]
+    runs-on: [self-hosted, macos-ci-runner]
     environment: test
 
     steps:
@@ -110,7 +110,7 @@ jobs:
   deploy_prod:
     needs: build_pack
     if: needs.build_pack.outputs.branch == 'Master'
-    runs-on:  [self-hosted, macos-ci-runner]
+    runs-on: [self-hosted, macos-ci-runner]
     environment: prod
 
     steps:
