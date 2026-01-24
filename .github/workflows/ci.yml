@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   build_and_deploy:
+    environment: test
     runs-on: [self-hosted, macos-ci-runner]
     timeout-minutes: 60
 
