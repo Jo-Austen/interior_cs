@@ -29,4 +29,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker compose -f compose.test.yml build backend frontend
+          docker compose -f deploy/compose.test.yml build backend frontend
