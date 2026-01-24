@@ -11,28 +11,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  docker-build-check:
-    runs-on: ubuntu-latest
-
+  ci_build_and_test:
+    runs-on: macos-ci-runner
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # ====== (可选) 单元测试：你后面把真实命令替换到这里 ======
+      # - name: Unit tests
+      #   shell: bash
+      #   run: |
+      #     set -euo pipefail
+      #     ./scripts/ci_test.sh
 
-      - name: Build backend image (no push)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: backend/Dockerfile
-          push: false
-          tags: interior-backend:ci
-
-      - name: Build frontend image (no push)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: frontend/Dockerfile
-          push: false
-          tags: interior-frontend:ci
+      - name: Build images (backend/frontend) for verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f compose.test.yml build backend frontend
