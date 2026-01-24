@@ -11,12 +11,29 @@ on:
   workflow_dispatch:
 
 jobs:
-  ci_build_and_test:
-    # 指定self-hosted，把runner注册成服务再试一下
+  build_pack:
     runs-on: [self-hosted, macos-ci-runner]
+    outputs:
+      sha7: ${{ steps.vars.outputs.sha7 }}
+      branch: ${{ steps.vars.outputs.branch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # 防止 Docker Desktop 重启/BuildKit snapshot 损坏导致的 parent snapshot not found
+      - name: Cleanup docker builder cache (pre)
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker builder prune -af || true
+
+      - name: Vars
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "sha7=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "branch=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
 
       # ====== (可选) 单元测试：你后面把真实命令替换到这里 ======
       # - name: Unit tests
@@ -25,8 +42,136 @@ jobs:
       #     set -euo pipefail
       #     ./scripts/ci_test.sh
 
-      - name: Build images (backend/frontend) for verification
+      - name: Build images (backend/frontend)
         shell: bash
         run: |
           set -euo pipefail
           docker compose -f deploy/compose.test.yml build backend frontend
+          docker pull mysql:8.4
+
+      - name: Save images to tar
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          docker save mysql:8.4 interior-backend:dev interior-frontend:dev \
+            -o "dist/base-images-${GITHUB_SHA::7}.tar"
+          ls -lh dist
+
+      - name: Upload tar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: base-images-${{ steps.vars.outputs.sha7 }}
+          path: dist/base-images-${{ steps.vars.outputs.sha7 }}.tar
+          if-no-files-found: error
+
+      - name: Cleanup docker builder cache (post)
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker builder prune -af || true
+
+  # ========== deploy to test (feature/*) ==========
+  deploy_test:
+    needs: build_pack
+    runs-on: [self-hosted, macos-ci-runner]
+    environment: test
+    # PR 不部署；只有 push / 手动触发才部署
+    if: >
+      github.event_name != 'pull_request' &&
+      startsWith(needs.build_pack.outputs.branch, 'feature/')
+
+    steps:
+      - name: Checkout (for deploy files)
+        uses: actions/checkout@v4
+
+      - name: Download tar artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: base-images-${{ needs.build_pack.outputs.sha7 }}
+          path: dist
+
+      - name: Setup SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload tar + compose (test)  # 不上传 env
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA7="${{ needs.build_pack.outputs.sha7 }}"
+          TAR_LOCAL="dist/base-images-${SHA7}.tar"
+          TAR_REMOTE="/tmp/base-images-test-${SHA7}.tar"
+
+          scp "$TAR_LOCAL" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${TAR_REMOTE}"
+          scp "deploy/compose.cd.test.yml" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/srv/app-test/compose.yml"
+
+      - name: Remote deploy (test)
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA7="${{ needs.build_pack.outputs.sha7 }}"
+          ssh "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << EOF
+            set -euo pipefail
+            docker load -i /tmp/base-images-test-${SHA7}.tar
+            docker compose -f /srv/app-test/compose.yml up -d --force-recreate
+            docker compose -f /srv/app-test/compose.yml ps
+          EOF
+
+  # ========== deploy to prod (Master) ==========
+  deploy_prod:
+    needs: build_pack
+    runs-on: [self-hosted, macos-ci-runner]
+    environment: prod
+    # PR 不部署；只有 push / 手动触发才部署
+    if: >
+      github.event_name != 'pull_request' &&
+      needs.build_pack.outputs.branch == 'Master'
+
+    steps:
+      - name: Checkout (for deploy files)
+        uses: actions/checkout@v4
+
+      - name: Download tar artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: base-images-${{ needs.build_pack.outputs.sha7 }}
+          path: dist
+
+      - name: Setup SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload tar + compose (prod)  # 不上传 env
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA7="${{ needs.build_pack.outputs.sha7 }}"
+          TAR_LOCAL="dist/base-images-${SHA7}.tar"
+          TAR_REMOTE="/tmp/base-images-prod-${SHA7}.tar"
+
+          scp "$TAR_LOCAL" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${TAR_REMOTE}"
+          scp "deploy/compose.cd.prod.yml" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/srv/app-prod/compose.yml"
+
+      - name: Remote deploy (prod)
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA7="${{ needs.build_pack.outputs.sha7 }}"
+          ssh "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << EOF
+            set -euo pipefail
+            docker load -i /tmp/base-images-prod-${SHA7}.tar
+            docker compose -f /srv/app-prod/compose.yml up -d --force-recreate
+            docker compose -f /srv/app-prod/compose.yml ps
+          EOF
