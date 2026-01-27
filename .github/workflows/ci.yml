@@ -47,6 +47,14 @@ jobs:
           set -euo pipefail
           docker compose -f deploy/compose.test.yml build backend frontend
           docker pull mysql:8.4
+      
+      - name: Run unit tests (backend)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 用刚刚 build 出来的 backend 镜像跑 pytest，避免本机 Python 依赖不一致
+          docker compose -f deploy/compose.test.yml run --rm backend \
+            sh -lc "python -m pytest -q backend/tests"
 
       - name: Save images to tar (local)
         shell: bash
