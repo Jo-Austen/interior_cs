@@ -38,7 +38,7 @@ services:
     image: interior-backend:dev
     container_name: interior-backend-test
     env_file:
-      - ./env/test.env
+      - ./env/test.env.example
     depends_on:
       db:
         condition: service_healthy
