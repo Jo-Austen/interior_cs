@@ -5,7 +5,7 @@ services:
     image: mysql:8.4
     container_name: interior-mysql-test
     env_file:
-      - ./env/test.env
+      - ./env/test.env.example
     command: >
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
@@ -24,7 +24,7 @@ services:
   migrate:
     image: interior-backend:dev
     env_file:
-      - ./env/test.env
+      - ./env/test.env.example
     depends_on:
       db:
         condition: service_healthy
@@ -55,7 +55,7 @@ services:
     image: interior-frontend:dev
     container_name: interior-frontend-test
     env_file:
-      - ./env/test.env
+      - ./env/test.env.example
     ports:
       - "3001:3000"
     restart: unless-stopped
